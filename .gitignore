@@ -1,0 +1,39 @@
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.aws/
+.ssh/
+credentials.json
+service-account*.json
+
+# Local editor, assistant, and operating system files
+.vscode/
+.idea/
+.agents/
+.codex/
+.DS_Store
+._*
+Thumbs.db
+*.log
+
+# Generated packages
+build/
+dist/
+*.egg-info/
