@@ -4,6 +4,7 @@ A small Pygame project designed to be read and changed by a new programmer.
 Run it with: python3 main.py
 """
 
+import asyncio
 import math
 import random
 from array import array
@@ -1418,7 +1419,7 @@ class Game:
 
         pygame.display.flip()
 
-    def run(self):
+    async def run(self):
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -1439,9 +1440,11 @@ class Game:
             self.update()
             self.draw()
             self.clock.tick(FPS)
+            # Let the browser handle input, sound, and drawing between frames.
+            await asyncio.sleep(0)
 
         pygame.quit()
 
 
 if __name__ == "__main__":
-    Game().run()
+    asyncio.run(Game().run())

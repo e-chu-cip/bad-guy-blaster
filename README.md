@@ -39,6 +39,43 @@ A keyboard-controlled maze game that mixes action with math practice.
 
 If VS Code asks for a Python interpreter, choose the one containing `.venv`.
 
+## Play in a browser locally
+
+With the project's Python environment activated, run:
+
+```bash
+python -m pip install -r requirements-web.txt
+python build_web.py
+python -m http.server 8000 --bind 127.0.0.1 --directory build/web
+```
+
+Open <http://127.0.0.1:8000> in your browser. The first load downloads the
+Python/Pygame browser runtime from Pygbag's CDN and may take a little time.
+Click the game to enable sound and keyboard input. This version requires a keyboard.
+Press Control+C in the terminal to stop the preview server.
+
+`build_web.py` packages only `main.py` in a clean temporary folder, then writes
+the website to `build/web`. Local environments, secrets, and editor settings
+are excluded from the game package. Rebuild after changing the source.
+
+## Publish with Cloudflare Pages
+
+Connect this GitHub repository to Cloudflare Pages and use:
+
+| Setting | Value |
+| --- | --- |
+| Production branch | `main` |
+| Framework preset | None |
+| Build command | `python -m pip install -r requirements-web.txt && python build_web.py` |
+| Build output directory | `build/web` |
+| Root directory | Leave blank (repository root) |
+| Environment variable | `PYTHON_VERSION` = `3.13.12` |
+
+The build installs the packaging tools and generates the website; Cloudflare
+publishes only `build/web`. After deployment, test movement, sound, and math
+questions at the provided `pages.dev` address. Future pushes to `main` trigger
+a new build and deployment.
+
 ## Controls
 
 - New players can click **How to Play** beside **Test Mode** on the opening screen for a four-page guide to controls, math, enemies, and items. Use **Previous/Next** or the arrow keys to browse; **Main Menu** or **Escape** returns to the opening screen.
