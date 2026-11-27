@@ -98,7 +98,7 @@ Test games follow the normal game rules using your chosen starting values. Click
 
 ## Hide Out
 
-The wooden house in the upper-left corner is the Hide Out. You can walk over it without entering; only Shift takes you inside from anywhere in the black world, for up to 10 seconds per visit. You get **two visits per game**, shared across all levels. Leaving early still uses one visit.
+The wooden house in the upper-left corner is the Hide Out. Both you and the robots can walk over it during normal play, so standing on or above the house does not protect you. Only Shift takes you inside from anywhere in the black world, for up to 10 seconds per visit. You get **two visits per game**, shared across all levels. Leaving early still uses one visit.
 
 Inside, you see only the wooden interior and cannot move or shoot. Robots keep moving outside, cannot hurt you, and are kept away from the house and exit. After 10 seconds you automatically return beside the house with a brief protection period. Math questions wait while you are inside; finish an active math question before entering. The side panel shows your remaining visits. Test games also start with two visits.
 

@@ -768,7 +768,9 @@ class Game:
 
     def update_enemies(self, now):
         for enemy in self.enemies:
-            enemy_walls = self.white_walls if enemy.world == "white" else self.black_walls + [self.hideout]
+            # Outside a Shift visit, the house is walkable for everyone.
+            # Blocking only robots here lets the player shoot from a safe spot.
+            enemy_walls = self.white_walls if enemy.world == "white" else self.black_walls
             target = self.player if enemy.world == self.world else self.portal
             if self.hideout_active:
                 if enemy.world == "black":
