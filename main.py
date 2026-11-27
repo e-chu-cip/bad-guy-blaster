@@ -36,7 +36,7 @@ BOMB_RADIUS = 100
 # Short pages keep the guide readable without scrolling.
 HOW_TO_PLAY_PAGES = (
     ("Move, aim, and survive", (
-        "Your goal: defeat every robot and clear all 10 levels!",
+        "Your goal: defeat every robot and clear all 15 levels!",
         "Start with 3 lives, 3 Basic bullets, and 2 Mega bullets.",
         "Move with WASD or the arrow keys. Walls block your path.",
         "Shots travel in the direction you last moved. Aim before firing!",
@@ -81,6 +81,32 @@ HOW_TO_PLAY_PAGES = (
         "Bombs pass through walls and defeat up to 3 nearby robots.",
         "Bag and Store pause the game. TAB or ESC closes either menu.",
     )),
+    ("New levels: 11 through 15", (
+        "Clear level 10 to continue. Win by clearing level 15!",
+        "After level 10, trade 3 normal bullets for 1 extra life, or skip.",
+        "Level 11: 8 red, 4 green, 4 blue, 2 yellow (18 robots).",
+        "Level 12: 9 red, 5 green, 4 blue, 2 yellow (20 robots).",
+        "Level 13: 10 red, 5 green, 5 blue, 2 yellow (22 robots).",
+        "Level 14: 10 red, 6 green, 5 blue, 3 yellow (24 robots).",
+        "Level 15: 11 red, 6 green, 6 blue, 3 yellow (26 robots).",
+        "Levels 2-10: up to 2 regular robots can be in the white world.",
+        "Levels 11-15: up to 4 regular robots can be there at once.",
+        "Robots can follow you back. Each white world has 4 zombies.",
+        "Zombies do not count toward the robot limit or clearing a level.",
+    )),
+    ("Math Practice", (
+        "Choose Math Practice on the main menu when you are not playing.",
+        "Choose 2, 4, or 6 minutes TOTAL for 15 different problems.",
+        "Practice addition and subtraction with 1- and 2-digit numbers,",
+        "multiplication up to 20 x 20, and division facts from 1 to 12.",
+        "Subtraction answers are nonnegative. Division has no remainders.",
+        "Type an answer, use BACKSPACE to edit, then press ENTER.",
+        "Wrong answers show Incorrect and the correct answer. Press Next.",
+        "The total timer keeps running while you review the correction.",
+        "Finish all 15 or run out of time to see your score and answers.",
+        "Practice does not change your game lives, ammunition, or level.",
+        "Press ESC or Main Menu to leave practice at any time.",
+    )),
 )
 
 # Counts for each level, in the order red, green, blue, yellow.
@@ -95,7 +121,13 @@ LEVEL_ENEMIES = [
     (6, 3, 3, 1),
     (7, 3, 3, 2),
     (8, 3, 3, 2),
+    (8, 4, 4, 2),
+    (9, 5, 4, 2),
+    (10, 5, 5, 2),
+    (10, 6, 5, 3),
+    (11, 6, 6, 3),
 ]
+MAX_LEVEL = len(LEVEL_ENEMIES)
 
 NAVY = (8, 12, 32)
 BLUE = (35, 90, 210)
@@ -189,6 +221,33 @@ def make_math_problem(level, two_bullet=False):
     answer = random.randint(math.ceil(10 / divisor), 99 // divisor)
     dividend = answer * divisor
     return MathProblem(f"{dividend} / {divisor} = ?", answer, 2)
+
+
+def make_practice_problems():
+    """Create 15 distinct questions with a mix of all four operations."""
+    specifications = ([('add', 9)] * 2 + [('add', 99)] * 2
+                      + [('subtract', 9)] * 2 + [('subtract', 99)] * 2
+                      + [('multiply', 20)] * 4 + [('divide', 12)] * 3)
+    problems = []
+    seen = set()
+    for operation, maximum in specifications:
+        while True:
+            a, b = random.randint(1, maximum), random.randint(1, maximum)
+            if operation == 'add':
+                question, answer = f"{a} + {b} = ?", a + b
+            elif operation == 'subtract':
+                a, b = max(a, b), min(a, b)
+                question, answer = f"{a} - {b} = ?", a - b
+            elif operation == 'multiply':
+                question, answer = f"{a} x {b} = ?", a * b
+            else:
+                question, answer = f"{a * b} / {b} = ?", a
+            if question not in seen:
+                seen.add(question)
+                problems.append(MathProblem(question, answer, 0))
+                break
+    random.shuffle(problems)
+    return problems
 
 
 def build_walls(level):
@@ -395,6 +454,10 @@ class Game:
         self.message = "Solve the problem to earn bullets!"
         self.message_until = pygame.time.get_ticks() + 3000
         self.game_state = "ready"
+        self.practice_problems = []
+        self.practice_answers = []
+        self.practice_answer = ""
+        self.practice_review_page = 0
         self.start_level(first_problem_delay=FIRST_PROBLEM_DELAY)
 
     def menu_buttons(self):
@@ -406,9 +469,30 @@ class Game:
             return buttons
         if self.game_state == "ready":
             if TEST_MODE_ENABLED:
-                return {"test": pygame.Rect(260, 600, 220, 50),
-                        "how_to_play": pygame.Rect(520, 600, 220, 50)}
-            return {"how_to_play": pygame.Rect(390, 600, 220, 50)}
+                return {"test": pygame.Rect(130, 600, 220, 50),
+                        "how_to_play": pygame.Rect(390, 600, 220, 50),
+                        "practice": pygame.Rect(650, 600, 220, 50)}
+            return {"how_to_play": pygame.Rect(260, 600, 220, 50),
+                    "practice": pygame.Rect(520, 600, 220, 50)}
+        if self.game_state == "practice_setup":
+            return {"practice_2": pygame.Rect(130, 320, 220, 65),
+                    "practice_4": pygame.Rect(390, 320, 220, 65),
+                    "practice_6": pygame.Rect(650, 320, 220, 65),
+                    "practice_back": pygame.Rect(390, 600, 220, 50)}
+        if self.game_state == "practice_playing":
+            return {"practice_submit": pygame.Rect(390, 450, 220, 55),
+                    "practice_back": pygame.Rect(390, 600, 220, 50)}
+        if self.game_state == "practice_feedback":
+            return {"practice_continue": pygame.Rect(390, 450, 220, 55),
+                    "practice_back": pygame.Rect(390, 600, 220, 50)}
+        if self.game_state == "practice_results":
+            buttons = {"practice_again": pygame.Rect(200, 620, 270, 50),
+                       "practice_back": pygame.Rect(530, 620, 270, 50)}
+            if self.practice_review_page > 0:
+                buttons["practice_previous"] = pygame.Rect(200, 540, 170, 50)
+            if self.practice_review_page < 2:
+                buttons["practice_next"] = pygame.Rect(630, 540, 170, 50)
+            return buttons
         if self.game_state == "how_to_play":
             buttons = {"help_close": pygame.Rect(390, 600, 220, 50)}
             if self.help_page > 0:
@@ -426,6 +510,12 @@ class Game:
             buttons["back"] = pygame.Rect(250, 610, 230, 55)
             buttons["start_test"] = pygame.Rect(520, 610, 230, 55)
             return buttons
+        if self.game_state == "life_offer":
+            buttons = {"trade_life": pygame.Rect(200, 350, 600, 75),
+                       "skip_life": pygame.Rect(200, 450, 600, 65)}
+            if self.test_mode:
+                buttons["back"] = pygame.Rect(390, 600, 220, 50)
+            return buttons
         buttons = {"bag": pygame.Rect(755, 648, 100, 38)} if self.game_state == "playing" else {}
         if self.test_mode:
             buttons["back"] = pygame.Rect(860, 648, 135, 38)
@@ -437,6 +527,22 @@ class Game:
                 continue
             if action == "bag":
                 self.open_overlay("bag")
+            elif action in ("practice", "practice_again"):
+                self.game_state = "practice_setup"
+            elif action in ("practice_2", "practice_4", "practice_6"):
+                self.start_practice(int(action[-1]))
+            elif action == "practice_submit":
+                self.submit_practice_answer()
+            elif action == "practice_continue":
+                self.continue_practice()
+            elif action == "practice_back":
+                self.game_state = "ready"
+            elif action == "practice_previous":
+                self.practice_review_page -= 1
+            elif action == "practice_next":
+                self.practice_review_page += 1
+            elif action in ("trade_life", "skip_life"):
+                self.finish_life_offer(buy_life=action == "trade_life")
             elif action == "close":
                 self.close_overlay()
             elif action == "mega":
@@ -496,8 +602,48 @@ class Game:
                 name, direction = action.split("_")
                 minimum = 0 if name in ("bullets", "mega") else 1
                 value = self.test_settings[name] + (1 if direction == "plus" else -1)
-                self.test_settings[name] = max(minimum, min(10, value) if name == "level" else value)
+                self.test_settings[name] = max(minimum, min(MAX_LEVEL, value) if name == "level" else value)
             return
+
+    def start_practice(self, minutes):
+        if self.game_state != "practice_setup" or minutes not in (2, 4, 6):
+            return
+        self.practice_problems = make_practice_problems()
+        self.practice_answers = []
+        self.practice_answer = ""
+        self.practice_review_page = 0
+        self.practice_deadline = pygame.time.get_ticks() + minutes * 60_000
+        self.game_state = "practice_playing"
+
+    def finish_practice(self):
+        self.practice_review_page = 0
+        self.game_state = "practice_results"
+
+    def submit_practice_answer(self):
+        if self.game_state != "practice_playing":
+            return
+        if pygame.time.get_ticks() >= self.practice_deadline:
+            self.finish_practice()
+            return
+        if not self.practice_answer:
+            return
+        problem = self.practice_problems[len(self.practice_answers)]
+        answer = int(self.practice_answer)
+        self.practice_answers.append(answer)
+        self.practice_answer = ""
+        if answer != problem.answer:
+            self.game_state = "practice_feedback"
+        elif len(self.practice_answers) == len(self.practice_problems):
+            self.finish_practice()
+
+    def continue_practice(self):
+        if self.game_state != "practice_feedback":
+            return
+        if (pygame.time.get_ticks() >= self.practice_deadline
+                or len(self.practice_answers) == len(self.practice_problems)):
+            self.finish_practice()
+        else:
+            self.game_state = "practice_playing"
 
     def open_overlay(self, name):
         self.overlay = name
@@ -556,13 +702,16 @@ class Game:
         self.start_level(first_problem_delay=FIRST_PROBLEM_DELAY)
         self.message = "Test game! Use Main Menu to return."
 
-    def draw_button(self, rect, label, highlighted=False, subtitle=None):
-        color = BLUE if rect.collidepoint(pygame.mouse.get_pos()) else (35, 55, 100)
+    def draw_button(self, rect, label, highlighted=False, subtitle=None, enabled=True):
+        color = BLUE if enabled and rect.collidepoint(pygame.mouse.get_pos()) else (35, 55, 100)
         if highlighted:
             color = YELLOW
+        if not enabled:
+            color = (45, 45, 55)
         pygame.draw.rect(self.screen, color, rect, border_radius=8)
-        pygame.draw.rect(self.screen, YELLOW if highlighted else LIGHT_BLUE, rect, 2, border_radius=8)
-        text_color = BLACK if highlighted else WHITE
+        border = GRAY if not enabled else YELLOW if highlighted else LIGHT_BLUE
+        pygame.draw.rect(self.screen, border, rect, 2, border_radius=8)
+        text_color = GRAY if not enabled else BLACK if highlighted else WHITE
         text = self.font.render(label, True, text_color)
         center = (rect.centerx, rect.centery - 10) if subtitle else rect.center
         self.screen.blit(text, text.get_rect(center=center))
@@ -614,6 +763,20 @@ class Game:
             for kind, count in zip(("red", "green", "blue", "yellow"), LEVEL_ENEMIES[self.level - 1])
             for _ in range(count)
         ]
+        # Keep the original starting positions, then find clear spots for larger levels.
+        if len(enemy_kinds) > len(enemy_starts):
+            for y in range(40, SCREEN_HEIGHT - 60, 60):
+                for x in range(40, PLAY_WIDTH - 60, 60):
+                    if len(enemy_starts) >= len(enemy_kinds):
+                        break
+                    candidate = pygame.Rect(x, y, 30, 30)
+                    occupied = [pygame.Rect(px, py, 30, 30) for px, py in enemy_starts]
+                    obstacles = self.walls + occupied + [self.hideout_clear_zone,
+                                                        self.player.inflate(160, 160)]
+                    if not any(candidate.inflate(10, 10).colliderect(wall) for wall in obstacles):
+                        enemy_starts.append((x, y))
+            if len(enemy_starts) < len(enemy_kinds):
+                raise RuntimeError("Not enough clear starting positions for this level.")
         self.enemies = [
             Enemy(x, y, enemy_speed, enemy_kinds[number])
             for number, (x, y) in enumerate(enemy_starts[:len(enemy_kinds)])
@@ -684,6 +847,25 @@ class Game:
             self.math_bell_sound.play()
 
     def handle_key(self, event):
+        if self.game_state.startswith("practice_"):
+            digit = getattr(event, "unicode", "")
+            if event.key == pygame.K_ESCAPE:
+                self.game_state = "ready"
+            elif self.game_state == "practice_feedback":
+                if event.key == pygame.K_RETURN:
+                    self.continue_practice()
+            elif self.game_state == "practice_playing":
+                if pygame.time.get_ticks() >= self.practice_deadline:
+                    self.finish_practice()
+                elif event.key == pygame.K_RETURN:
+                    self.submit_practice_answer()
+                elif event.key == pygame.K_BACKSPACE:
+                    self.practice_answer = self.practice_answer[:-1]
+                elif digit and digit in "0123456789" and len(self.practice_answer) < 3:
+                    self.practice_answer += digit
+            return
+        if self.game_state == "life_offer":
+            return  # Require an explicit button choice before starting level 11.
         if self.game_state == "how_to_play":
             if event.key == pygame.K_ESCAPE:
                 self.game_state = "ready"
@@ -773,6 +955,7 @@ class Game:
         self.message_until = now + 1800
 
     def update_enemies(self, now):
+        white_world_limit = 4 if self.level >= 11 else 2
         for enemy in self.enemies:
             # Outside a Shift visit, the house is walkable for everyone.
             # Blocking only robots here lets the player shoot from a safe spot.
@@ -787,7 +970,7 @@ class Game:
             enemy.update(target or self.player, enemy_walls)
             if (self.portal and enemy.active and enemy.world != self.world
                     and now >= max(enemy.portal_ready_at, enemy.frozen_until) and enemy.rect.colliderect(self.portal)):
-                if self.world == "black" or sum(e.world == "white" for e in self.enemies) < 2:
+                if self.world == "black" or sum(e.world == "white" for e in self.enemies) < white_world_limit:
                     enemy.world = self.world
                     enemy.rect.center = self.portal.center
                     enemy.portal_ready_at = now + 1500
@@ -1076,6 +1259,10 @@ class Game:
         self.message_until = pygame.time.get_ticks() + 1800
 
     def update(self):
+        if self.game_state in ("practice_playing", "practice_feedback"):
+            if pygame.time.get_ticks() >= self.practice_deadline:
+                self.finish_practice()
+            return
         if self.overlay or self.game_state != "playing":
             return
 
@@ -1121,18 +1308,58 @@ class Game:
             if not self.mega_pair_offered:
                 self.new_problem()
                 return
-            if self.level == 10:
+            if self.level == MAX_LEVEL:
                 self.game_state = "won"
+            elif self.level == 10:
+                self.game_state = "life_offer"
+                self.life_offer_started = now
             else:
-                self.level += 1
-                if self.level == 5:
-                    self.lives += 1
-                self.bullets_left += 2
-                self.start_level()
-                self.message = "Level 5! +1 life!" if self.level == 5 else f"Level {self.level}!"
-                self.message_until = now + 1800
+                self.advance_level()
         elif now >= self.next_problem_at:
             self.new_problem()
+
+    def advance_level(self):
+        self.level += 1
+        if self.level == 5:
+            self.lives += 1
+        self.bullets_left += 2
+        self.game_state = "playing"
+        self.start_level()
+        self.message = "Level 5! +1 life!" if self.level == 5 else f"Level {self.level}!"
+        self.message_until = pygame.time.get_ticks() + 1800
+
+    def finish_life_offer(self, buy_life):
+        if self.game_state != "life_offer":
+            return
+        if buy_life:
+            if self.bullets_left < 3:
+                return
+            self.bullets_left -= 3
+            self.lives += 1
+        # Keep any unspent speed-boost time while the player makes a choice.
+        if self.fire_until:
+            self.fire_until += pygame.time.get_ticks() - self.life_offer_started
+        self.advance_level()
+
+    def draw_life_offer(self):
+        self.screen.fill(NAVY)
+        lines = [
+            ("LEVEL 10 COMPLETE!", self.big_font, YELLOW, 140),
+            ("Trade normal (Basic) bullets for one extra life?", self.font, WHITE, 220),
+            (f"Lives: {self.lives}     Normal bullets: {self.bullets_left}", self.font, GREEN, 275),
+            ("Your usual +2 normal bullets arrive when level 11 starts.", self.small_font, WHITE, 555),
+        ]
+        for text, font, color, y in lines:
+            surface = font.render(text, True, color)
+            self.screen.blit(surface, surface.get_rect(center=(SCREEN_WIDTH // 2, y)))
+        buttons = self.menu_buttons()
+        can_afford = self.bullets_left >= 3
+        self.draw_button(buttons["trade_life"], "+1 life for 3 normal bullets",
+                         subtitle="Trade and start level 11" if can_afford else "Not enough normal bullets",
+                         enabled=can_afford)
+        self.draw_button(buttons["skip_life"], "Continue without extra life")
+        if self.test_mode:
+            self.draw_button(buttons["back"], "Main Menu")
 
     def draw_player(self):
         color = GREEN
@@ -1159,7 +1386,7 @@ class Game:
     def draw_panel(self):
         panel = pygame.Rect(PLAY_WIDTH, 0, SCREEN_WIDTH - PLAY_WIDTH, SCREEN_HEIGHT)
         pygame.draw.rect(self.screen, (22, 28, 52), panel)
-        self.screen.blit(self.font.render(f"LEVEL  {self.level} / 10", True, WHITE), (755, 30))
+        self.screen.blit(self.font.render(f"LEVEL  {self.level} / {MAX_LEVEL}", True, WHITE), (755, 30))
         self.screen.blit(self.font.render(f"Lives: {self.lives}", True, GREEN), (755, 75))
         for label, count, color, size, y in (
             ("Basic", self.bullets_left, YELLOW, 12, 120),
@@ -1314,7 +1541,7 @@ class Game:
             "Move: WASD / arrows. Hide Out: SHIFT (2 visits)",
             "SPACE: shoot. Bag: choose ammo/items. TAB: store",
             "Type math answers and press ENTER",
-            "You have 3 lives—clear all 10 levels!",
+            f"You have 3 lives—clear all {MAX_LEVEL} levels!",
         ]
         for number, line in enumerate(directions):
             color = LIGHT_BLUE if number == 0 else WHITE
@@ -1329,6 +1556,67 @@ class Game:
         if TEST_MODE_ENABLED:
             self.draw_button(self.menu_buttons()["test"], "Test Mode")
         self.draw_button(self.menu_buttons()["how_to_play"], "How to Play")
+        self.draw_button(self.menu_buttons()["practice"], "Math Practice")
+
+    def draw_practice(self):
+        self.screen.fill((255, 255, 255))
+
+        def text(message, y, font=None):
+            surface = (font or self.font).render(message, True, (0, 0, 0))
+            self.screen.blit(surface, surface.get_rect(center=(SCREEN_WIDTH // 2, y)))
+
+        text("MATH PRACTICE", 80, self.big_font)
+        labels = {"practice_back": "Main Menu", "practice_submit": "Submit",
+                  "practice_continue": "Next",
+                  "practice_again": "Practice Again", "practice_previous": "Previous",
+                  "practice_next": "Next", "practice_2": "2 minutes",
+                  "practice_4": "4 minutes", "practice_6": "6 minutes"}
+        if self.game_state == "practice_setup":
+            text("15 different problems. Choose your total time:", 210)
+            text("Addition and subtraction: 1- and 2-digit numbers", 440, self.small_font)
+            text("Multiplication up to 20 x 20. Division facts: 1-12.", 480, self.small_font)
+            text("Type answers and press Enter. One attempt per question.", 520, self.small_font)
+        elif self.game_state in ("practice_playing", "practice_feedback"):
+            seconds = max(0, math.ceil((self.practice_deadline - pygame.time.get_ticks()) / 1000))
+            text(f"Time left: {seconds // 60}:{seconds % 60:02d}", 160)
+            feedback = self.game_state == "practice_feedback"
+            index = len(self.practice_answers) - int(feedback)
+            text(f"Problem {index + 1} of 15", 220)
+            problem = self.practice_problems[index]
+            if feedback:
+                text("Incorrect", 285, self.big_font)
+                text(f"Your answer: {self.practice_answers[index]}", 335)
+                text(f"Correct answer: {problem.question[:-4]} = {problem.answer}", 390)
+                text("Press Enter or click Next. The timer is still running.", 550, self.small_font)
+            else:
+                text(problem.question, 305, self.big_font)
+                pygame.draw.rect(self.screen, (0, 0, 0), (350, 360, 300, 60), 2, border_radius=8)
+                text(self.practice_answer or "_", 390, self.big_font)
+                text("Type your answer, then press Enter or click Submit.", 550, self.small_font)
+        else:
+            score = sum(answer == problem.answer for answer, problem
+                        in zip(self.practice_answers, self.practice_problems))
+            text(f"Score: {score} / 15", 135)
+            status = "All 15 answered!" if len(self.practice_answers) == 15 else "Time is up!"
+            text(f"{status}   Answered: {len(self.practice_answers)} / 15", 175, self.small_font)
+            start = self.practice_review_page * 5
+            for row, problem in enumerate(self.practice_problems[start:start + 5]):
+                index = start + row
+                submitted = self.practice_answers[index] if index < len(self.practice_answers) else None
+                answer_text = str(submitted) if submitted is not None else "Not answered"
+                correct = submitted == problem.answer
+                text(f"{index + 1}. {problem.question[:-4]} = {problem.answer}",
+                     235 + row * 58)
+                status_text = " - Correct!" if correct else " - Incorrect" if submitted is not None else ""
+                text(f"Your answer: {answer_text}" + status_text,
+                     260 + row * 58, self.small_font)
+            text(f"Answers {start + 1}-{start + 5} of 15", 565, self.small_font)
+        for action, rect in self.menu_buttons().items():
+            fill = (235, 235, 235) if rect.collidepoint(pygame.mouse.get_pos()) else (255, 255, 255)
+            pygame.draw.rect(self.screen, fill, rect, border_radius=8)
+            pygame.draw.rect(self.screen, (0, 0, 0), rect, 2, border_radius=8)
+            label = self.font.render(labels[action], True, (0, 0, 0))
+            self.screen.blit(label, label.get_rect(center=rect.center))
 
     def draw_how_to_play(self):
         self.screen.fill(NAVY)
@@ -1347,6 +1635,14 @@ class Game:
             self.draw_button(rect, labels[action])
 
     def draw(self):
+        if self.game_state.startswith("practice_"):
+            self.draw_practice()
+            pygame.display.flip()
+            return
+        if self.game_state == "life_offer":
+            self.draw_life_offer()
+            pygame.display.flip()
+            return
         if self.game_state == "how_to_play":
             self.draw_how_to_play()
             pygame.display.flip()
@@ -1417,7 +1713,7 @@ class Game:
             shade = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
             shade.fill((0, 0, 0, 190))
             self.screen.blit(shade, (0, 0))
-            title = "YOU WON ALL 10 LEVELS!" if self.game_state == "won" else "GAME OVER"
+            title = f"YOU WON ALL {MAX_LEVEL} LEVELS!" if self.game_state == "won" else "GAME OVER"
             title_surface = self.big_font.render(title, True, YELLOW)
             self.screen.blit(title_surface, title_surface.get_rect(center=(500, 300)))
             restart = self.font.render("Press R to play again", True, WHITE)
@@ -1437,7 +1733,7 @@ class Game:
                     self.handle_click(event.pos)
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        if self.game_state == "how_to_play":
+                        if self.game_state == "how_to_play" or self.game_state.startswith("practice_"):
                             self.handle_key(event)
                         elif self.overlay:
                             self.close_overlay()

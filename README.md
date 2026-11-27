@@ -99,12 +99,32 @@ a new build and deployment.
 - Use **Backspace** to fix an answer.
 - Press **Escape** to close the game.
 
+## Math Practice
+
+Choose **Math Practice** on the opening menu, outside gameplay. Select **2 minutes**,
+**4 minutes**, or **6 minutes** for the entire set of **15 different problems**.
+The set mixes one- and two-digit addition/subtraction (operands up to 99),
+multiplication with factors from 1 to 20 (up to 20 × 20), and division facts
+with divisors and whole-number answers from 1 to 12. Subtraction answers are
+nonnegative.
+
+Type an answer, edit with Backspace, and press Enter or click Submit. Each
+question allows one attempt. A wrong answer immediately shows **Incorrect** and
+the correct answer; press Enter or click **Next** to continue. The total timer
+keeps running during this feedback. Math Practice uses white backgrounds and
+black text throughout. Finish all 15 or reach the time limit to see your
+score out of 15 and review your answers, including correct answers for mistakes
+and unanswered questions. Use Previous/Next to review all 15, Practice Again for
+a new set, or Main Menu/Escape to leave. Practice is also available in public
+builds without Test Mode. It does not change game lives, ammunition, or levels
+and cannot be opened during a game.
+
 ## Test a game
 
 Test Mode is available in the local Python game and optional development browser
 builds. It is hidden and disabled in the public Cloudflare version.
 
-Click **Test Mode** on the opening screen. Use the **+** and **-** buttons to choose a starting level (1–10), lives (1 or more), Basic bullets (0 or more), and Mega bullets (0 or more). Click **Poison's Yes/No button** to toggle whether you start with poison, then click **Start Test** (or press Enter).
+Click **Test Mode** on the opening screen. Use the **+** and **-** buttons to choose a starting level (1–15), lives (1 or more), Basic bullets (0 or more), and Mega bullets (0 or more). Click **Poison's Yes/No button** to toggle whether you start with poison, then click **Start Test** (or press Enter).
 
 Test games follow the normal game rules using your chosen starting values. Click **Main Menu** to return at any time, including during math questions or after winning or losing. Returning resets the normal game to level 1 with 3 lives, 3 Basic bullets, 2 Mega bullets, and no poison.
 
@@ -133,7 +153,7 @@ Kills from bullets, bombs, and poison count; green robots only count when fully 
 
 From level 2 onward, a white tornado portal appears in a random clear spot away from the Hide Out. Walk into it to enter the white world, which has a white background, brown fences, and trees. Walk out of the arrival portal and back into its black tornado to return. You can revisit freely; only your current world is visible.
 
-Regular badguys can follow through the portal, with at most two in the white world at once. They can also follow you back. Every level's white world starts with exactly four black zombies, moving 75% slower than that level's red robots. Zombies stay in the white world, cannot be attacked with bullets or poison, and disappear after touching and taking one life from an unprotected player. They do not respawn on return visits. Regular badguys in both worlds count toward clearing the level; zombies do not.
+Regular badguys can follow through the portal, with at most two in the white world at once in levels 2–10, and at most four in levels 11–15. They can also follow you back. Every level's white world starts with exactly four black zombies, separate from that limit, moving 75% slower than that level's red robots. Zombies stay in the white world, cannot be attacked with bullets or poison, and disappear after touching and taking one life from an unprotected player. They do not respawn on return visits. Regular badguys in both worlds count toward clearing the level; zombies do not.
 
 The Hide Out is only available in the black world. Portals and zombies also appear when testing level 2 or higher.
 
@@ -141,6 +161,7 @@ The Hide Out is only available in the black world. Portals and zombies also appe
 
 - The player starts with 3 lives, 3 Basic bullets, and 2 Mega bullets.
 - Reaching level 5 gives one extra life, even if you still have all 3 starting lives.
+- After completing level 10, a choice screen offers **1 extra life for 3 normal (Basic) bullets**, or **Continue without extra life**. The trade is available only if you already have at least 3 normal bullets; Mega bullets cannot pay for it. This is a one-time choice before level 11. Gameplay and any remaining Fire boost pause during the choice. Either choice starts level 11 and gives the usual 2 normal bullets for advancing.
 - The robots freeze during each math problem.
 - A bell rings when each new math question appears, including the second Mega question.
 - Each level's first math round offers a Mega-question pair. Later rounds have a one-in-three chance of offering another pair. If a blue robot remains and you have no Mega bullets, you get another opportunity within three math rounds, even after failing a previous pair. The second question in a pair does not count as a new round. If you clear the robots before any math appears, the guaranteed opportunity appears before advancing.
@@ -152,7 +173,7 @@ The Hide Out is only available in the black world. Portals and zombies also appe
 - Earn an extra Mega bullet by correctly solving two 2-bullet problems back to back in 20 seconds total. After the first correct answer, the second question appears immediately and gameplay stays paused. Each problem allows one attempt; failing a problem resets progress. After the pair, gameplay resumes whether or not you earned a Mega. Each correct answer still earns its normal Basic bullets.
 - Mega bullets deal twice the damage, are light gray, and are 50% larger in diameter than Basic bullets. They defeat any robot in one hit. Impacts create a firework in the robot's color, or white when no robot is hit; fireworks do not damage other robots.
 - Every math problem allows only one attempt. A wrong answer or timeout ends the problem with no reward; existing ammunition is kept.
-- Clear all robots to reach the next level. Win by clearing level 10.
+- Clear all robots to reach the next level. Win by clearing level 15.
 
 ## Robot colors
 
@@ -168,6 +189,11 @@ The Hide Out is only available in the black world. Portals and zombies also appe
 | 8 | 6 | 3 | 3 | 1 | 13 |
 | 9 | 7 | 3 | 3 | 2 | 15 |
 | 10 | 8 | 3 | 3 | 2 | 16 |
+| 11 | 8 | 4 | 4 | 2 | 18 |
+| 12 | 9 | 5 | 4 | 2 | 20 |
+| 13 | 10 | 5 | 5 | 2 | 22 |
+| 14 | 10 | 6 | 5 | 3 | 24 |
+| 15 | 11 | 6 | 6 | 3 | 26 |
 
 - **Red:** the original robot; one bullet defeats it.
 - **Green (level 2+):** has two lives. The first Basic bullet makes it vanish for 5 seconds, then it returns in a random safe spot. A second Basic bullet defeats it. One Mega defeats it immediately.
