@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import pygame
 
 from game_config import TEST_MODE_ENABLED
+from online import ONLINE_HELP_PAGE, with_online_features
 
 
 # These are constants: named values that do not change while the game runs.
@@ -82,6 +83,8 @@ HOW_TO_PLAY_PAGES = (
         "Bag and Store pause the game. TAB or ESC closes either menu.",
     )),
 )
+
+HOW_TO_PLAY_PAGES += (ONLINE_HELP_PAGE,)
 
 # Counts for each level, in the order red, green, blue, yellow.
 LEVEL_ENEMIES = [
@@ -338,6 +341,7 @@ class Enemy:
             pygame.draw.rect(screen, WHITE, (self.rect.right - 3, self.rect.y + 12, 4, 4))
 
 
+@with_online_features
 class Game:
     def __init__(self):
         pygame.mixer.pre_init(44100, -16, 2, 512)
@@ -1118,6 +1122,8 @@ class Game:
             return
 
         if not self.enemies:
+            if self.offer_level_summary(now):
+                return
             if not self.mega_pair_offered:
                 self.new_problem()
                 return
@@ -1437,7 +1443,7 @@ class Game:
                     self.handle_click(event.pos)
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        if self.game_state == "how_to_play":
+                        if self.game_state in ("how_to_play", "leaderboard", "level_summary"):
                             self.handle_key(event)
                         elif self.overlay:
                             self.close_overlay()
