@@ -1,5 +1,6 @@
 """Package only the game's source for the browser, excluding local private files."""
 
+import argparse
 from pathlib import Path
 import shutil
 import subprocess
@@ -9,15 +10,22 @@ import zipfile
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--include-test-mode", action="store_true",
+                        help="Keep Test Mode in a separate development browser build.")
+    args = parser.parse_args()
     project = Path(__file__).resolve().parent
     output = project / "build" / "web"
     output.parent.mkdir(exist_ok=True)
 
-    # Pygbag packages its input folder. Use a clean folder containing only the game.
+    # Pygbag packages its input folder. Include only the game and public settings.
     with tempfile.TemporaryDirectory(prefix="web-build-") as temporary:
         app = Path(temporary) / "bad-guy-blaster"
         app.mkdir()
         shutil.copy2(project / "main.py", app / "main.py")
+        (app / "game_config.py").write_text(
+            f"TEST_MODE_ENABLED = {args.include_test_mode!r}\n", encoding="utf-8"
+        )
         subprocess.run(
             [sys.executable, "-m", "pygbag", "--build", "--no_opt",
              "--title", "Bad Guy Blasters", "--width", "1000", "--height", "700",
@@ -29,7 +37,7 @@ def main():
         if len(archives) != 1:
             raise RuntimeError("Expected one packaged game archive.")
         with zipfile.ZipFile(archives[0]) as archive:
-            if set(archive.namelist()) != {"assets/main.py"}:
+            if set(archive.namelist()) != {"assets/main.py", "assets/game_config.py"}:
                 raise RuntimeError("Unexpected files in game archive; stopping publication.")
         shutil.copytree(built, output, dirs_exist_ok=True)
 

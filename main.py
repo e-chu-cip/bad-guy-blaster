@@ -12,6 +12,8 @@ from dataclasses import dataclass
 
 import pygame
 
+from game_config import TEST_MODE_ENABLED
+
 
 # These are constants: named values that do not change while the game runs.
 SCREEN_WIDTH = 1000
@@ -403,8 +405,10 @@ class Game:
             buttons["close"] = pygame.Rect(390, 575, 220, 50)
             return buttons
         if self.game_state == "ready":
-            return {"test": pygame.Rect(260, 600, 220, 50),
-                    "how_to_play": pygame.Rect(520, 600, 220, 50)}
+            if TEST_MODE_ENABLED:
+                return {"test": pygame.Rect(260, 600, 220, 50),
+                        "how_to_play": pygame.Rect(520, 600, 220, 50)}
+            return {"how_to_play": pygame.Rect(390, 600, 220, 50)}
         if self.game_state == "how_to_play":
             buttons = {"help_close": pygame.Rect(390, 600, 220, 50)}
             if self.help_page > 0:
@@ -537,6 +541,8 @@ class Game:
 
     def start_test(self):
         """Start a fresh game using exactly the selected test settings."""
+        if not TEST_MODE_ENABLED:
+            return
         settings = self.test_settings.copy()
         self.reset_game()
         self.test_settings = settings
@@ -1320,7 +1326,8 @@ class Game:
 
         begin = self.big_font.render("Hit Enter to Begin Game", True, GREEN)
         self.screen.blit(begin, begin.get_rect(center=(SCREEN_WIDTH // 2, 550)))
-        self.draw_button(self.menu_buttons()["test"], "Test Mode")
+        if TEST_MODE_ENABLED:
+            self.draw_button(self.menu_buttons()["test"], "Test Mode")
         self.draw_button(self.menu_buttons()["how_to_play"], "How to Play")
 
     def draw_how_to_play(self):

@@ -54,9 +54,14 @@ Python/Pygame browser runtime from Pygbag's CDN and may take a little time.
 Click the game to enable sound and keyboard input. This version requires a keyboard.
 Press Control+C in the terminal to stop the preview server.
 
-`build_web.py` packages only `main.py` in a clean temporary folder, then writes
-the website to `build/web`. Local environments, secrets, and editor settings
-are excluded from the game package. Rebuild after changing the source.
+`build_web.py` packages `main.py` and a generated `game_config.py` in a clean
+temporary folder, then writes the website to `build/web`. Local environments,
+secrets, and editor settings are excluded from the game package. Rebuild after
+changing the source.
+
+The default browser build (including Cloudflare) hides and disables Test Mode.
+Running `python main.py` locally keeps Test Mode available. For a separate
+development browser build with Test Mode, use `python build_web.py --include-test-mode`.
 
 ## Publish with Cloudflare Pages
 
@@ -78,7 +83,7 @@ a new build and deployment.
 
 ## Controls
 
-- New players can click **How to Play** beside **Test Mode** on the opening screen for a four-page guide to controls, math, enemies, and items. Use **Previous/Next** or the arrow keys to browse; **Main Menu** or **Escape** returns to the opening screen.
+- New players can click **How to Play** on the opening screen for a four-page guide to controls, math, enemies, and items. Use **Previous/Next** or the arrow keys to browse; **Main Menu** or **Escape** returns to the opening screen.
 - Press **Enter** on the opening screen when you are ready to begin.
 - Move with **W A S D** or the **arrow keys**.
 - **Space** always fires Basic bullets; **M** fires Mega bullets. Command does not fire.
@@ -91,6 +96,9 @@ a new build and deployment.
 - Press **Escape** to close the game.
 
 ## Test a game
+
+Test Mode is available in the local Python game and optional development browser
+builds. It is hidden and disabled in the public Cloudflare version.
 
 Click **Test Mode** on the opening screen. Use the **+** and **-** buttons to choose a starting level (1–10), lives (1 or more), Basic bullets (0 or more), and Mega bullets (0 or more). Click **Poison's Yes/No button** to toggle whether you start with poison, then click **Start Test** (or press Enter).
 
