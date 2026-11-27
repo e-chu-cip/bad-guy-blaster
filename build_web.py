@@ -1,6 +1,7 @@
 """Package only the game's source for the browser, excluding local private files."""
 
 import argparse
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -9,12 +10,27 @@ import tempfile
 import zipfile
 
 
+def default_test_mode(project):
+    """Use Cloudflare's branch name, or the checked-out branch for local builds."""
+    branch = os.environ.get("CF_PAGES_BRANCH")
+    if branch is None:
+        try:
+            branch = subprocess.run(
+                ["git", "branch", "--show-current"], cwd=project,
+                check=True, capture_output=True, text=True,
+            ).stdout.strip()
+        except (OSError, subprocess.CalledProcessError):
+            branch = ""
+    return branch == "experimental-gameplay"
+
+
 def main():
+    project = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--include-test-mode", action="store_true",
+                        default=default_test_mode(project),
                         help="Keep Test Mode in a separate development browser build.")
     args = parser.parse_args()
-    project = Path(__file__).resolve().parent
     output = project / "build" / "web"
     output.parent.mkdir(exist_ok=True)
 

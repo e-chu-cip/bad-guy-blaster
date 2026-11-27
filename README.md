@@ -59,9 +59,13 @@ temporary folder, then writes the website to `build/web`. Local environments,
 secrets, and editor settings are excluded from the game package. Rebuild after
 changing the source.
 
-The default browser build (including Cloudflare) hides and disables Test Mode.
-Running `python main.py` locally keeps Test Mode available. For a separate
-development browser build with Test Mode, use `python build_web.py --include-test-mode`.
+`main` is the stable Cloudflare production branch; its browser build hides and
+disables Test Mode. `experimental-gameplay` is the development branch; its browser
+build includes Test Mode automatically, both locally and in Cloudflare previews.
+The build uses Cloudflare's `CF_PAGES_BRANCH` variable when available, or the
+checked-out Git branch locally. Outside Git it defaults to hiding Test Mode.
+Running `python main.py` locally always keeps Test Mode available. To explicitly
+include it in another browser build, use `python build_web.py --include-test-mode`.
 
 ## Publish with Cloudflare Pages
 
