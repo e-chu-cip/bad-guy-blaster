@@ -200,6 +200,12 @@ Names are limited to 16 ASCII letters, digits, spaces, hyphens, or underscores.
 The nickname box is prefilled with a system-generated name. Submit it as-is, or
 type your own nickname to replace it. Click the box to select its text; use
 Backspace to edit or Command/Ctrl+A to select all. The box locks after submission.
+Submission feedback distinguishes **Saving**, **Result Saved**, and a failed
+request that can be retried. The server confirms the actual saved nickname and
+rank. Runs with zero completed levels are saved but do not enter the leaderboard;
+the results screen explains this. A saved run ranked below 10 also displays its
+rank and explains why it is absent from the top-10 list. These confirmations stay
+visible when the leaderboard refreshes.
 
 Ranking is most completed levels first, then lowest cumulative time through those
 completed levels. Unfinished-level time is excluded from ranking. Production

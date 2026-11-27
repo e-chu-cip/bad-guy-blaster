@@ -92,3 +92,40 @@ test('experimental and production versions cannot mix scores', async () => {
   assert.equal((await request('board')).data.variant, 'experimental-15-v1');
   db.close();
 });
+
+test('custom nickname is acknowledged and appears on the leaderboard after clearing a level', async () => {
+  const {db, request, credentials} = service();
+  const run = credentials();
+  await request('start', run);
+  await request('progress', {...run, level: 1, total_ms: 1000});
+  const saved = await request('finish', {...run, nickname: 'TURTLE'});
+  assert.deepEqual(saved.data, {ok: true, nickname: 'TURTLE', completed: 1, eligible: true, rank: 1});
+  assert.equal((await request('board')).data.board[0].nickname, 'TURTLE');
+  const retried = await request('finish', {...run, nickname: 'Different'});
+  assert.equal(retried.data.nickname, 'TURTLE');
+  db.close();
+});
+
+test('zero-level custom submission is saved but explicitly reported as not eligible', async () => {
+  const {db, request, credentials} = service();
+  const run = credentials();
+  await request('start', run);
+  const saved = await request('finish', {...run, nickname: 'testing123'});
+  assert.deepEqual(saved.data, {ok: true, nickname: 'testing123', completed: 0, eligible: false, rank: null});
+  assert.equal(db.prepare('SELECT nickname FROM runs WHERE id = ?').get(run.id).nickname, 'testing123');
+  assert.equal((await request('board')).data.board.length, 0);
+  db.close();
+});
+
+test('saved run outside top ten receives its true rank', async () => {
+  const {db, request, credentials} = service();
+  for (let i = 0; i < 11; i++) {
+    const run = credentials();
+    await request('start', run);
+    await request('progress', {...run, level: 1, total_ms: 1000 + i});
+    const saved = await request('finish', {...run, nickname: `Custom-${i}`});
+    assert.equal(saved.data.rank, i + 1);
+  }
+  assert.equal((await request('board')).data.board.length, 10);
+  db.close();
+});
