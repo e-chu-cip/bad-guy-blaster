@@ -39,8 +39,10 @@ def main():
         app = Path(temporary) / "bad-guy-blaster"
         app.mkdir()
         shutil.copy2(project / "main.py", app / "main.py")
+        shutil.copy2(project / "online.py", app / "online.py")
+        from game_config import ONLINE_VARIANT
         (app / "game_config.py").write_text(
-            f"TEST_MODE_ENABLED = {args.include_test_mode!r}\n", encoding="utf-8"
+            f"TEST_MODE_ENABLED = {args.include_test_mode!r}\nONLINE_VARIANT = {ONLINE_VARIANT!r}\n", encoding="utf-8"
         )
         subprocess.run(
             [sys.executable, "-m", "pygbag", "--build", "--no_opt",
@@ -53,9 +55,17 @@ def main():
         if len(archives) != 1:
             raise RuntimeError("Expected one packaged game archive.")
         with zipfile.ZipFile(archives[0]) as archive:
-            if set(archive.namelist()) != {"assets/main.py", "assets/game_config.py"}:
+            if set(archive.namelist()) != {"assets/main.py", "assets/game_config.py", "assets/online.py"}:
                 raise RuntimeError("Unexpected files in game archive; stopping publication.")
         shutil.copytree(built, output, dirs_exist_ok=True)
+    shutil.copy2(project / "web" / "scores.js", output / "scores.js")
+    index = output / "index.html"
+    html = index.read_text(encoding="utf-8")
+    html = html.replace('<html lang="en-us">', '<html lang="en-us"><script src="scores.js"></script>', 1)
+    if '<script src="scores.js"></script>' not in html:
+        raise RuntimeError("Could not add the first-party scores connection to the page.")
+    index.write_text(html, encoding="utf-8")
+    (output / "_routes.json").write_text('{"version":1,"include":["/api/*"],"exclude":[]}', encoding="utf-8")
 
     print("Browser build ready in build/web")
     print("Preview: python -m http.server 8000 --bind 127.0.0.1 --directory build/web")

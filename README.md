@@ -54,7 +54,7 @@ Python/Pygame browser runtime from Pygbag's CDN and may take a little time.
 Click the game to enable sound and keyboard input. This version requires a keyboard.
 Press Control+C in the terminal to stop the preview server.
 
-`build_web.py` packages `main.py` and a generated `game_config.py` in a clean
+`build_web.py` packages `main.py`, `online.py`, and a generated `game_config.py` in a clean
 temporary folder, then writes the website to `build/web`. Local environments,
 secrets, and editor settings are excluded from the game package. Rebuild after
 changing the source.
@@ -212,3 +212,55 @@ Read and change just one small thing at a time:
 6. **Classes:** Change how the `Enemy` is drawn without changing how it moves.
 
 After every change: predict what will happen, run the game, and compare the result.
+
+## Play counts, timers, and the top 10
+
+Normal browser games send a first-party request to `/api/start` when Enter starts
+an actual game. Each run has random credentials; retrying the same start does not
+increase the count. Page loads, Test Mode, Math Practice, and desktop games are not
+counted. Counts begin when this feature is deployed, not retroactively.
+
+Level and total timers include math-solving and Hide Out time. Bag/store menus,
+level results, leaderboards, and the extra-life choice pause the clock. Losing a
+life does not reset it. Each cleared level shows its own time and cumulative time,
+with Continue and Leaderboard buttons. The final screen shows the run duration and
+last-level time. Complete a normal run (win or lose) and submit a nickname to join
+the top 10; a run must clear at least one level to rank. Use Play Again to restart.
+Names are limited to 16 ASCII letters, digits, spaces, hyphens, or underscores.
+
+Ranking is most completed levels first, then lowest cumulative time through those
+completed levels. Unfinished-level time is excluded from ranking. Production
+(`classic-10-v1`) and experimental (`experimental-15-v1`) scores and play counts are
+separate. Each submitted run can occupy one place; this does not identify people.
+The game stores no raw IP addresses, cookies, or persistent visitor identifiers.
+Times are reported by the client with server sanity checks: this is a casual
+leaderboard, not a cheat-proof competition.
+
+`functions/api/[[path]].js` provides the API. Cloudflare D1 stores runs, per-level
+splits, and counters. `wrangler.toml` binds `GAME_DB` for both production and preview
+and chooses the ruleset. Database IDs are public resource identifiers, not secrets.
+Only `/api/*` invokes Functions; the game assets stay static.
+
+Database schema setup (already applied to the project database):
+
+```bash
+npx wrangler d1 migrations apply bad-guy-blaster-scores --remote
+```
+
+To test the full browser/API connection with an isolated local database:
+
+```bash
+python build_web.py
+npx wrangler d1 migrations apply bad-guy-blaster-scores --local
+npx wrangler pages dev build/web --binding GAME_VARIANT=experimental-15-v1 --port 8030 --ip 127.0.0.1
+```
+
+Use `GAME_VARIANT=classic-10-v1` when testing the production checkout. Open
+http://127.0.0.1:8030. A plain `python -m http.server` serves the game and timers,
+but cannot run the database API. Desktop Python games also have local timers only.
+Network errors never stop gameplay. Requests retry in order while the page remains
+open; closing it can discard unsent requests. Online status is shown on results
+and leaderboard screens. Pending results are not a guarantee of successful saving.
+
+Checks: `python -m unittest discover -v` and `node --test tests/online_api.test.mjs`
+(the API tests use Node 22.13+ with its built-in SQLite support and no live data).

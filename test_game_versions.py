@@ -24,7 +24,7 @@ class GameVersionTests(unittest.TestCase):
 
     def test_public_menu_has_help_but_no_test_mode(self):
         with patch("main.TEST_MODE_ENABLED", False):
-            self.assertEqual(set(self.game.menu_buttons()), {"how_to_play", "practice"})
+            self.assertEqual(set(self.game.menu_buttons()), {"how_to_play", "practice", "online_board"})
             self.game.draw_ready_screen()
             self.game.handle_click((150, 625))  # Test Mode position in development builds.
             self.assertEqual(self.game.game_state, "ready")

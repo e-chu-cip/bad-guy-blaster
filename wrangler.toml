@@ -1,0 +1,21 @@
+name = "bad-guy-blaster"
+pages_build_output_dir = "./build/web"
+compatibility_date = "2026-11-26"
+
+[vars]
+GAME_VARIANT = "classic-10-v1"
+
+[[d1_databases]]
+binding = "GAME_DB"
+database_name = "bad-guy-blaster-scores"
+database_id = "3523310f-0c26-48fc-9b2a-bc705faf8b4c"
+migrations_dir = "migrations"
+
+[env.preview.vars]
+GAME_VARIANT = "experimental-15-v1"
+
+[[env.preview.d1_databases]]
+binding = "GAME_DB"
+database_name = "bad-guy-blaster-scores"
+database_id = "3523310f-0c26-48fc-9b2a-bc705faf8b4c"
+migrations_dir = "migrations"
