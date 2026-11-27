@@ -65,7 +65,22 @@ export async function onRequest({request, env}) {
     if (!/^[A-Za-z0-9 _-]{1,16}$/.test(nickname)) return reply({error: "Use a nickname of 1-16 letters, numbers, spaces, _ or -."}, 400);
     if (!run.finished) await env.GAME_DB.prepare(`UPDATE runs SET finished = 1, nickname = ?, finished_at = ? WHERE id = ? AND finished = 0`)
       .bind(nickname, now, body.id).run();
-    return reply({ok: true});
+    const saved = await env.GAME_DB.prepare("SELECT nickname, completed, total_ms, finished_at FROM runs WHERE id = ?")
+      .bind(body.id).first();
+    let rank = null;
+    if (saved.completed > 0) {
+      const ahead = await env.GAME_DB.prepare(`SELECT COUNT(*) AS count FROM runs
+        WHERE variant = ? AND finished = 1 AND completed > 0 AND (
+          completed > ? OR (completed = ? AND total_ms < ?) OR
+          (completed = ? AND total_ms = ? AND finished_at < ?) OR
+          (completed = ? AND total_ms = ? AND finished_at = ? AND id < ?))`)
+        .bind(variant, saved.completed, saved.completed, saved.total_ms,
+          saved.completed, saved.total_ms, saved.finished_at,
+          saved.completed, saved.total_ms, saved.finished_at, body.id).first();
+      rank = ahead.count + 1;
+    }
+    return reply({ok: true, nickname: saved.nickname, completed: saved.completed,
+      eligible: saved.completed > 0, rank});
   } catch (error) {
     if (error instanceof SyntaxError) return reply({error: "Invalid JSON."}, 400);
     console.error("Game scores service failed", error.message);

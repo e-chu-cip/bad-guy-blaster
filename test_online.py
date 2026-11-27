@@ -1,4 +1,5 @@
 import os
+import json
 import unittest
 from unittest.mock import patch
 
@@ -23,6 +24,56 @@ class ClockTests(unittest.TestCase):
         clock.next_level(30_000)
         clock.resume(30_000)
         self.assertEqual(clock.complete(2, 31_000), {"level": 2, "level_ms": 1000, "total_ms": 5500})
+
+
+class FakeBridge:
+    def __init__(self):
+        self.responses = []
+        self.requests = []
+
+    def request(self, path, payload):
+        self.requests.append((path, payload))
+        return len(self.requests)
+
+    def poll(self, request_id):
+        return self.responses.pop(0) if self.responses else ''
+
+
+class SubmissionTests(unittest.TestCase):
+    def test_confirmation_survives_automatic_leaderboard_refresh(self):
+        for eligible, rank, expected in [(False, None, 'Clear at least 1 level'),
+                                          (True, 1, 'rank: #1'),
+                                          (True, 11, 'outside the top 10')]:
+            with self.subTest(eligible=eligible, rank=rank):
+                client = ScoresClient()
+                client.enabled = True
+                client.bridge = FakeBridge()
+                client.send('finish', {'id': 'run', 'nickname': 'TURTLE'})
+                client.update(0)
+                self.assertEqual(client.submissions['run']['state'], 'pending')
+                client.bridge.responses.append(json.dumps({'ok': True, 'status': 200,
+                    'data': {'nickname': 'TURTLE', 'eligible': eligible, 'rank': rank}}))
+                client.update(1)
+                self.assertIn('Saved as TURTLE', client.submissions['run']['message'])
+                self.assertIn(expected, client.submissions['run']['message'])
+                client.bridge.responses.append(json.dumps({'ok': True, 'status': 200,
+                    'data': {'board': [], 'plays': 1}}))
+                client.update(2)
+                self.assertEqual(client.submissions['run']['state'], 'saved')
+                self.assertIn(expected, client.submissions['run']['message'])
+
+    def test_network_error_keeps_submission_pending_and_retries(self):
+        client = ScoresClient()
+        client.enabled = True
+        client.bridge = FakeBridge()
+        client.send('finish', {'id': 'run', 'nickname': 'TURTLE'})
+        client.update(0)
+        client.bridge.responses.append(json.dumps({'ok': False, 'status': 0, 'data': {}}))
+        client.update(1)
+        self.assertEqual(client.submissions['run']['state'], 'pending')
+        self.assertIn('not saved yet', client.submissions['run']['message'])
+        client.update(3000)
+        self.assertEqual(len(client.bridge.requests), 2)
 
 
 class OnlineGameTests(unittest.TestCase):
@@ -157,6 +208,20 @@ class OnlineGameTests(unittest.TestCase):
             self.game.lose_life(100)
         self.assertEqual(self.game.game_state, 'lost')
         self.assertEqual(self.game.run_clock.total(20_000), 5000)
+
+    def test_rejected_submission_unlocks_nickname_and_allows_retry(self):
+        self.start()
+        self.game.lose_life(100)
+        self.game._submit_result()
+        run_id = self.game.run_credentials['id']
+        self.game.scores.submissions[run_id] = {'state': 'failed', 'message': 'Not saved: try again.'}
+        self.game.update()
+        self.assertFalse(self.game.result_submitted)
+        self.assertTrue(self.game.nickname_focused)
+        self.game.nickname = 'TURTLE'
+        self.game._submit_result()
+        self.assertTrue(self.game.result_submitted)
+        self.assertEqual(self.game.scores.submissions[run_id]['state'], 'pending')
 
 
 if __name__ == '__main__':

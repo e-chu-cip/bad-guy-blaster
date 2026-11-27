@@ -72,6 +72,7 @@ class ScoresClient:
         self.retry_at = 0
         self.board = []
         self.plays = None
+        self.submissions = {}
         self.status = "Online scores load in the browser. Local games are not counted."
         self.enabled = sys.platform == "emscripten"
         self.bridge = None
@@ -79,6 +80,9 @@ class ScoresClient:
     def send(self, path, body=None):
         if self.enabled:
             self.pending.append({"path": path, "body": body, "attempt": 0})
+            if path == "finish":
+                self.submissions[body["id"]] = {"state": "pending",
+                    "message": f"Saving as {body['nickname']}... Keep this page open."}
 
     def update(self, now):
         if not self.enabled:
@@ -100,15 +104,30 @@ class ScoresClient:
                         self.board = response["data"]["board"]
                         self.plays = response["data"]["plays"]
                     elif item["path"] == "finish":
-                        self.status = "Your result was saved."
+                        saved = response["data"]
+                        name = saved["nickname"]
+                        if not saved["eligible"]:
+                            message = f"Saved as {name}. Clear at least 1 level to enter the top 10."
+                        elif saved["rank"] <= 10:
+                            message = f"Saved as {name}. Leaderboard rank: #{saved['rank']}."
+                        else:
+                            message = f"Saved as {name}. Rank #{saved['rank']} (outside the top 10)."
+                        self.submissions[item["body"]["id"]] = {"state": "saved", "message": message}
+                        self.status = message
                         self.send("board")
                 elif response["status"] in (0, 429, 503):
                     item["attempt"] += 1
                     self.pending.appendleft(item)
                     self.retry_at = now + min(30_000, 1000 * 2 ** min(item["attempt"], 5))
                     self.status = "Scores offline; retrying. Gameplay can continue."
+                    if item["path"] == "finish":
+                        self.submissions[item["body"]["id"]] = {"state": "pending",
+                            "message": "Result not saved yet; retrying. Keep this page open."}
                 else:
                     self.status = response["data"].get("error", "Result could not be saved.")
+                    if item["path"] == "finish":
+                        self.submissions[item["body"]["id"]] = {"state": "failed",
+                            "message": "Not saved: " + self.status}
             if not self.current and self.pending and now >= self.retry_at:
                 item = self.pending.popleft()
                 payload = json.dumps(item["body"]) if item["body"] is not None else ""
@@ -209,6 +228,15 @@ def with_online_features(base):
             self.result_submitted = True
             self.scores.status = "Result queued. Keep the game open until it is saved."
 
+        def _submission(self):
+            if not self.run_credentials:
+                return None
+            return self.scores.submissions.get(self.run_credentials["id"])
+
+        def _result_status(self):
+            submission = self._submission()
+            return submission["message"] if submission else self.scores.status
+
         def menu_buttons(self):
             state = self.game_state
             if state == "level_summary":
@@ -308,6 +336,11 @@ def with_online_features(base):
         def update(self):
             now = pygame.time.get_ticks()
             self.scores.update(now)
+            submission = self._submission()
+            if submission and submission["state"] == "failed" and self.result_submitted:
+                self.result_submitted = False
+                self.nickname_focused = True
+                self.nickname_selected = True
             self._sync_timer()
             if self.game_state in ("leaderboard", "level_summary"):
                 return
@@ -361,8 +394,8 @@ def with_online_features(base):
                                          (row['completed'], 550), (format_time(row['total_ms']), 775)]:
                             cell(label, x, y)
                     if not self.scores.board:
-                        self._text("No submitted results yet.", 300)
-                    self._text(self.scores.status, 585)
+                        self._text("No qualifying results yet. Clear at least 1 level.", 300)
+                    self._text(self._result_status(), 585)
                     self.draw_button(self.menu_buttons()["online_return"], "Back")
                     self.draw_button(self.menu_buttons()["online_refresh"], "Refresh")
                 pygame.display.flip()
@@ -399,11 +432,12 @@ def with_online_features(base):
                     if self.nickname_focused and not self.result_submitted and not selected and pygame.time.get_ticks() % 1000 < 500:
                         pygame.draw.line(self.screen, (0, 0, 0), (name_rect.right + 2, field.top + 10), (name_rect.right + 2, field.bottom - 10), 2)
                     self.screen.set_clip(previous_clip)
-                    self._text("Use a nickname, not your real name. Submit accepts the name in the box.", 535)
-                    label = "Result queued/sent" if self.result_submitted else "Submit Result"
+                    self._text("Submit uses the name above. Clear at least 1 level to qualify.", 535)
+                    submission = self._submission()
+                    label = "Result Saved" if submission and submission["state"] == "saved" else "Saving..." if self.result_submitted else "Submit Result"
                     self.draw_button(self.menu_buttons()["online_submit"], label)
                 self.draw_button(self.menu_buttons()["online_board"], "Leaderboard")
-                self._text(self.scores.status, 565)
+                self._text(self._result_status(), 565)
                 # Restart is a button, leaving all letters available for nicknames.
                 self.draw_button(self.menu_buttons()["online_again"], "Play Again")
             pygame.display.flip()
