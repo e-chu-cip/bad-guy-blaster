@@ -197,6 +197,9 @@ with Continue and Leaderboard buttons. The final screen shows the run duration a
 last-level time. Complete a normal run (win or lose) and submit a nickname to join
 the top 10; a run must clear at least one level to rank. Use Play Again to restart.
 Names are limited to 16 ASCII letters, digits, spaces, hyphens, or underscores.
+The nickname box is prefilled with a system-generated name. Submit it as-is, or
+type your own nickname to replace it. Click the box to select its text; use
+Backspace to edit or Command/Ctrl+A to select all. The box locks after submission.
 
 Ranking is most completed levels first, then lowest cumulative time through those
 completed levels. Unfinished-level time is excluded from ranking. Production

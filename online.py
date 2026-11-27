@@ -129,6 +129,8 @@ def with_online_features(base):
             self.run_credentials = None
             self.result_submitted = False
             self.nickname = ""
+            self.nickname_focused = True
+            self.nickname_selected = True
             self.leaderboard_return = "ready"
             super().reset_game()
 
@@ -223,11 +225,20 @@ def with_online_features(base):
                 buttons["online_again"] = pygame.Rect(390, 650, 220, 40)
                 if not self.run_clock.test:
                     buttons["online_submit"] = pygame.Rect(170, 590, 300, 50)
+                    buttons["online_nickname"] = pygame.Rect(330, 475, 340, 48)
             return buttons
 
         def handle_click(self, position):
             action = next((name for name, rect in self.menu_buttons().items()
                            if name.startswith("online_") and rect.collidepoint(position)), None)
+            if action == "online_nickname":
+                if not self.result_submitted:
+                    self.nickname_focused = True
+                    self.nickname_selected = True
+                return
+            if self.game_state in ("won", "lost"):
+                self.nickname_focused = False
+                self.nickname_selected = False
             if action == "online_board":
                 self.leaderboard_return = self.game_state
                 self.game_state = "leaderboard"
@@ -256,16 +267,22 @@ def with_online_features(base):
                     self._continue_level()
                 return
             if self.game_state in ("won", "lost"):
-                if event.key == pygame.K_BACKSPACE:
-                    if not self.result_submitted:
-                        self.nickname = self.nickname[:-1]
-                elif event.key == pygame.K_RETURN:
+                if event.key == pygame.K_RETURN:
                     self._submit_result()
-                elif event.key == pygame.K_r and getattr(event, "unicode", "") == "":
-                    super().handle_key(event)
-                else:
+                elif not self.result_submitted and self.nickname_focused:
                     char = getattr(event, "unicode", "")
-                    if not self.result_submitted and char and char.isascii() and (char.isalnum() or char in " _-") and len(self.nickname) < 16:
+                    shortcut = getattr(event, "mod", 0) & (pygame.KMOD_CTRL | pygame.KMOD_META)
+                    if event.key == pygame.K_a and shortcut:
+                        self.nickname_selected = True
+                    elif event.key == pygame.K_BACKSPACE:
+                        self.nickname = "" if self.nickname_selected else self.nickname[:-1]
+                        self.nickname_selected = False
+                    elif not shortcut and char and char.isascii() and (char.isalnum() or char in " _-"):
+                        if self.nickname_selected:
+                            self.nickname = ""
+                            self.nickname_selected = False
+                        if len(self.nickname) >= 16:
+                            return
                         self.nickname += char
                 return
             before = self.game_state
@@ -363,12 +380,30 @@ def with_online_features(base):
                 if self.run_clock.test:
                     self._text("Test run: no play count or leaderboard entry.", 480)
                 else:
-                    self._text("Nickname (type to edit; Backspace to erase): " + self.nickname, 470)
-                    self._text("Use a nickname, not your real name. Press Enter to submit.", 510)
+                    self._text("Type a nickname, or keep the system-generated nickname below.", 455)
+                    field = self.menu_buttons()["online_nickname"]
+                    pygame.draw.rect(self.screen, (235, 235, 235) if self.result_submitted else (255, 255, 255), field, border_radius=6)
+                    border = (70, 180, 255) if self.nickname_focused and not self.result_submitted else (145, 155, 180)
+                    pygame.draw.rect(self.screen, border, field, 3, border_radius=6)
+                    selected = self.nickname_selected and self.nickname_focused and not self.result_submitted
+                    color = (255, 255, 255) if selected else (0, 0, 0)
+                    name = self.font.render(self.nickname, True, color)
+                    name_rect = name.get_rect(midleft=(field.left + 12, field.centery))
+                    if name_rect.right > field.right - 12:
+                        name_rect.right = field.right - 12
+                    previous_clip = self.screen.get_clip()
+                    self.screen.set_clip(field.inflate(-16, -8))
+                    if selected and self.nickname:
+                        pygame.draw.rect(self.screen, (35, 90, 210), name_rect.inflate(4, 4))
+                    self.screen.blit(name, name_rect)
+                    if self.nickname_focused and not self.result_submitted and not selected and pygame.time.get_ticks() % 1000 < 500:
+                        pygame.draw.line(self.screen, (0, 0, 0), (name_rect.right + 2, field.top + 10), (name_rect.right + 2, field.bottom - 10), 2)
+                    self.screen.set_clip(previous_clip)
+                    self._text("Use a nickname, not your real name. Submit accepts the name in the box.", 535)
                     label = "Result queued/sent" if self.result_submitted else "Submit Result"
                     self.draw_button(self.menu_buttons()["online_submit"], label)
                 self.draw_button(self.menu_buttons()["online_board"], "Leaderboard")
-                self._text(self.scores.status, 550)
+                self._text(self.scores.status, 565)
                 # Restart is a button, leaving all letters available for nicknames.
                 self.draw_button(self.menu_buttons()["online_again"], "Play Again")
             pygame.display.flip()
