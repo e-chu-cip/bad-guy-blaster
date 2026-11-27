@@ -103,6 +103,42 @@ class OnlineGameTests(unittest.TestCase):
             self.game.update()
         self.assertEqual(self.game.run_clock.total(11_000), 4000)
 
+    def test_generated_nickname_is_visible_and_can_be_submitted_unchanged(self):
+        self.start()
+        generated = self.game.nickname
+        self.assertTrue(generated.startswith('Player-'))
+        self.game.lose_life(100)
+        self.game.draw()
+        self.assertIn('online_nickname', self.game.menu_buttons())
+        field = self.game.menu_buttons()['online_nickname']
+        self.assertEqual(self.game.screen.get_at((field.left + 8, field.top + 8))[:3], (255, 255, 255))
+        self.game.handle_click(self.game.menu_buttons()['online_submit'].center)
+        submitted = [x for x in self.game.scores.pending if x['path'] == 'finish']
+        self.assertEqual(submitted[0]['body']['nickname'], generated)
+
+    def test_nickname_box_replaces_generated_name_and_supports_select_all(self):
+        self.start()
+        self.game.lose_life(100)
+        self.game.handle_click(self.game.menu_buttons()['online_nickname'].center)
+        for char in 'Rocket':
+            self.game.handle_key(pygame.event.Event(pygame.KEYDOWN, key=ord(char.lower()), unicode=char))
+        self.assertEqual(self.game.nickname, 'Rocket')
+        self.game.handle_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a, mod=pygame.KMOD_META))
+        self.game.handle_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_b, unicode='B'))
+        self.assertEqual(self.game.nickname, 'B')
+        self.game.handle_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_BACKSPACE))
+        self.assertEqual(self.game.nickname, '')
+        self.game.handle_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+        self.assertFalse(self.game.result_submitted)
+        for char in 'WWWWWWWWWWWWWWWW':
+            self.game.handle_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w, unicode=char))
+        self.game.draw()  # Long names remain clipped inside the box.
+        self.assertEqual(len(self.game.nickname), 16)
+        self.game.handle_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+        name = self.game.nickname
+        self.game.handle_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a, unicode='a'))
+        self.assertEqual(self.game.nickname, name)
+
     def test_final_level_and_death_freeze_clock_and_submit_only_once(self):
         self.start()
         self.game.level = len(LEVEL_ENEMIES)
